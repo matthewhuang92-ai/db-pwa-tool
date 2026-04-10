@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1a1a1a">
+  <link rel="manifest" href="manifest.json">
+  <title>数据库工具</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+                   "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+      background: #f0f0f0;
+      color: #222;
+      font-size: 15px;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #1a1a1a;
+      color: white;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    header h1 { font-size: 18px; font-weight: 700; }
+    .header-actions { display: flex; gap: 8px; }
+    .header-btn {
+      background: #333;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .header-btn:hover { background: #555; }
+
+    /* ── Main ── */
+    main {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.10);
+      padding: 14px;
+    }
+    .card-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #eee;
+    }
+
+    /* ── Input ── */
+    #query-input {
+      width: 100%;
+      height: 88px;
+      font-family: "Consolas", "Monaco", monospace;
+      font-size: 13px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 8px;
+      resize: vertical;
+      outline: none;
+    }
+    #query-input:focus { border-color: #1a1a1a; }
+    .input-actions { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary   { background: #1a1a1a; color: white; }
+    .btn-primary:hover { background: #333; }
+    .btn-secondary { background: #e5e5e5; color: #333; }
+    .btn-secondary:hover { background: #d0d0d0; }
+    .btn:disabled  { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Results ── */
+    .results-meta { font-size: 12px; color: #888; margin-bottom: 8px; min-height: 18px; }
+    .table-wrapper { overflow-x: auto; border-radius: 4px; border: 1px solid #eee; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      background: #f5f5f5;
+      text-align: left;
+      padding: 6px 10px;
+      font-weight: 600;
+      border-bottom: 2px solid #ddd;
+      white-space: nowrap;
+      font-size: 12px;
+      color: #555;
+    }
+    td { padding: 5px 10px; border-bottom: 1px solid #eee; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+
+    tr.row-record-header td {
+      background: #1a1a1a;
+      color: white;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 6px 10px;
+    }
+    tr.row-odd  td { background: #f9f9f9; }
+    tr.row-even td { background: white; }
+    tr.row-odd:hover  td,
+    tr.row-even:hover td { background: #eef2ff; }
+
+    td.col-check { width: 34px; text-align: center; cursor: pointer; font-size: 16px; user-select: none; }
+    th.col-check { width: 34px; text-align: center; }
+    td.col-field { width: 130px; color: #666; white-space: nowrap; font-size: 12px; }
+    td.col-value { word-break: break-all; }
+
+    .copy-row { margin-top: 10px; }
+
+    /* ── Update ── */
+    .update-columns { display: flex; gap: 10px; flex-wrap: wrap; }
+    .update-col {
+      flex: 1;
+      min-width: 160px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+    .update-col-title { font-size: 12px; font-weight: 700; color: #333; margin-bottom: 8px; }
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 0;
+    }
+    .radio-option input[type=radio] { cursor: pointer; accent-color: #1a1a1a; }
+    .radio-option label { cursor: pointer; font-size: 13px; }
+    .radio-skip label { color: #aaa; font-style: italic; }
+    .update-btn-row { margin-top: 12px; }
+    .btn-update-full { width: 100%; padding: 10px; justify-content: center; }
+
+    /* ── Log ── */
+    #log-box {
+      height: 120px;
+      overflow-y: auto;
+      font-family: "Consolas", "Monaco", monospace;
+      font-size: 12px;
+      background: #f7f7f7;
+      border-radius: 4px;
+      padding: 8px;
+      border: 1px solid #e5e5e5;
+    }
+    .log-ok   { color: #16a34a; }
+    .log-warn { color: #b45309; }
+    .log-err  { color: #dc2626; }
+    .log-info { color: #555; }
+
+    /* ── Status bar ── */
+    #status-bar {
+      font-size: 12px;
+      color: #888;
+      text-align: center;
+      padding: 2px 0;
+    }
+
+    /* ── Spinner ── */
+    .spinner {
+      display: none;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    .spinner.visible { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: white;
+      border-radius: 10px;
+      padding: 22px;
+      width: min(380px, 95vw);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal h2 { font-size: 16px; margin-bottom: 16px; }
+    .modal label { font-size: 12px; color: #555; display: block; margin-bottom: 3px; }
+    .modal input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 13px;
+      margin-bottom: 12px;
+      outline: none;
+    }
+    .modal input:focus { border-color: #1a1a1a; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .update-col { min-width: calc(50% - 5px); }
+      main { padding: 8px; gap: 8px; }
+      header h1 { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>数据库工具</h1>
+  <div class="header-actions">
+    <button class="header-btn" id="btn-install" style="display:none">安装 App</button>
+    <button class="header-btn" id="btn-settings">⚙ 设置</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- 查询 -->
+  <section class="card">
+    <div class="card-title">查询（提单号 / 柜号，支持批量：换行或逗号分隔）</div>
+    <textarea id="query-input" placeholder="例：SITCSHA2412345&#10;SITCSHA2412346, SITCSHA2412347"></textarea>
+    <div class="input-actions">
+      <button class="btn btn-primary" id="btn-query" onclick="doQuery()">
+        <span class="spinner" id="query-spinner"></span>查 询
+      </button>
+      <button class="btn btn-secondary" onclick="doClear()">清 除</button>
+      <span style="font-size:12px;color:#aaa;margin-left:4px">Ctrl+Enter 快速查询</span>
+    </div>
+  </section>
+
+  <!-- 结果 -->
+  <section class="card">
+    <div class="card-title">查询结果</div>
+    <div class="results-meta" id="results-meta">—</div>
+    <div class="table-wrapper">
+      <table id="results-table">
+        <thead>
+          <tr>
+            <th class="col-check">☑</th>
+            <th class="col-field">字段</th>
+            <th class="col-value">值</th>
+          </tr>
+        </thead>
+        <tbody id="results-body">
+          <tr><td colspan="3" style="text-align:center;color:#bbb;padding:24px;font-size:13px">暂无数据</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="copy-row">
+      <button class="btn btn-secondary" onclick="doCopy()">复制勾选内容</button>
+    </div>
+  </section>
+
+  <!-- 更新 -->
+  <section class="card">
+    <div class="card-title">更新进度</div>
+    <div class="update-columns">
+      <div class="update-col">
+        <div class="update-col-title">资料进度</div>
+        <div id="radio-progress"></div>
+      </div>
+      <div class="update-col">
+        <div class="update-col-title">明细_开单进度</div>
+        <div id="radio-detail"></div>
+      </div>
+      <div class="update-col">
+        <div class="update-col-title">账单状态</div>
+        <div id="radio-bill"></div>
+      </div>
+    </div>
+    <div class="update-btn-row">
+      <button class="btn btn-primary btn-update-full" id="btn-update" onclick="doUpdate()">
+        <span class="spinner" id="update-spinner"></span>更新数据库
+      </button>
+    </div>
+  </section>
+
+  <!-- 日志 -->
+  <section class="card">
+    <div class="card-title">操作日志</div>
+    <div id="log-box"></div>
+  </section>
+
+  <div id="status-bar">就绪</div>
+
+</main>
+
+<!-- 设置弹窗 -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal">
+    <h2>API 设置</h2>
+    <label>API 地址（Railway 后端 URL）</label>
+    <input id="cfg-api-url" type="url" placeholder="https://your-app.railway.app">
+    <label>API Key</label>
+    <input id="cfg-api-key" type="password" placeholder="your-api-key">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeSettings()">取消</button>
+      <button class="btn btn-primary" onclick="saveSettings()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Constants ────────────────────────────────────────────────────────────────
+const SKIP = '-- 不修改 --';
+
+const COLUMNS_META = [
+  { id: 'B_L_No',        label: '提单号',       defaultChecked: true  },
+  { id: '清关公司',      label: '清关公司',     defaultChecked: false },
+  { id: '实际清关费_柜', label: '实际清关费/柜', defaultChecked: false },
+  { id: 'Container_No',  label: '柜号',         defaultChecked: false },
+  { id: 'POD',           label: '目的港',       defaultChecked: false },
+  { id: 'ETA',           label: '预计到港',     defaultChecked: false },
+  { id: '货代',          label: '货代',         defaultChecked: false },
+  { id: '品名',          label: '品名',         defaultChecked: false },
+  { id: '资料进度',      label: '资料进度',     defaultChecked: false },
+  { id: '明细_开单进度', label: '明细_开单进度', defaultChecked: false },
+  { id: '账单状态',      label: '账单状态',     defaultChecked: false },
+];
+
+const RADIO_DEFS = [
+  {
+    containerId: 'radio-progress',
+    name: 'progress',
+    options: [
+      SKIP, '取消', '等待草稿', '等待确认B/L 草稿',
+      '已确认B/L 草稿', '等待确认F. E 草稿', '等待确认草稿',
+      '已确认所有草稿', '已发正本至清关',
+    ],
+    field: '资料进度',
+  },
+  {
+    containerId: 'radio-detail',
+    name: 'detail',
+    options: [SKIP, '做明细中', '已准备', '已做明细', '已开单'],
+    field: '明细_开单进度',
+  },
+  {
+    containerId: 'radio-bill',
+    name: 'bill',
+    options: [SKIP, '已出账单', '已批账单'],
+    field: '账单状态',
+  },
+];
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let queriedBLList = [];
+let rowCheckState = {};   // rowKey → { label, checked, value }
+
+// ─── Config (localStorage) ────────────────────────────────────────────────────
+function loadCfg() {
+  return {
+    apiUrl: (localStorage.getItem('apiUrl') || '').replace(/\/$/, ''),
+    apiKey: localStorage.getItem('apiKey') || '',
+  };
+}
+
+// ─── Settings modal ───────────────────────────────────────────────────────────
+document.getElementById('btn-settings').onclick = openSettings;
+document.getElementById('settings-modal').onclick = e => {
+  if (e.target === e.currentTarget) closeSettings();
+};
+
+function openSettings() {
+  const cfg = loadCfg();
+  document.getElementById('cfg-api-url').value = cfg.apiUrl;
+  document.getElementById('cfg-api-key').value = cfg.apiKey;
+  document.getElementById('settings-modal').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('settings-modal').classList.remove('open');
+}
+function saveSettings() {
+  localStorage.setItem('apiUrl', document.getElementById('cfg-api-url').value.trim().replace(/\/$/, ''));
+  localStorage.setItem('apiKey', document.getElementById('cfg-api-key').value.trim());
+  closeSettings();
+  setStatus('设置已保存');
+}
+
+// ─── Build radio groups ───────────────────────────────────────────────────────
+RADIO_DEFS.forEach(({ containerId, name, options }) => {
+  const container = document.getElementById(containerId);
+  options.forEach((opt, i) => {
+    const id = `${name}_${i}`;
+    const div = document.createElement('div');
+    div.className = 'radio-option' + (opt === SKIP ? ' radio-skip' : '');
+    div.innerHTML = `<input type="radio" name="${name}" id="${id}" value="${opt}" ${i === 0 ? 'checked' : ''}>` +
+                    `<label for="${id}">${opt}</label>`;
+    container.appendChild(div);
+  });
+});
+
+function getRadio(name) {
+  const el = document.querySelector(`input[name="${name}"]:checked`);
+  return el ? el.value : SKIP;
+}
+function resetRadios() {
+  RADIO_DEFS.forEach(({ name }) => {
+    const first = document.querySelector(`input[name="${name}"]`);
+    if (first) first.checked = true;
+  });
+}
+
+// ─── API ──────────────────────────────────────────────────────────────────────
+async function apiFetch(path, body) {
+  const cfg = loadCfg();
+  if (!cfg.apiUrl) throw new Error('请先在设置中填写 API 地址');
+  if (!cfg.apiKey) throw new Error('请先在设置中填写 API Key');
+
+  const resp = await fetch(cfg.apiUrl + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-API-Key': cfg.apiKey },
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+    throw new Error(err.detail || `HTTP ${resp.status}`);
+  }
+  return resp.json();
+}
+
+function parseInput(raw) {
+  return [...new Set(raw.split(/[\s,，]+/).map(s => s.trim()).filter(Boolean))];
+}
+
+// ─── Query ────────────────────────────────────────────────────────────────────
+async function doQuery() {
+  const values = parseInput(document.getElementById('query-input').value);
+  if (!values.length) { alert('请输入至少一个提单号或柜号'); return; }
+
+  setLoading('query', true);
+  setStatus('查询中…');
+  try {
+    const data = await apiFetch('/query', { values });
+    renderResults(data.results);
+
+    // Collect found BL numbers
+    queriedBLList = [];
+    const foundSet = new Set();
+    data.results.forEach(r => {
+      if (r.B_L_No) { foundSet.add(r.B_L_No); queriedBLList.push(r.B_L_No); }
+      (r.Container_No || '').split(/[\n\r]+/).forEach(c => c.trim() && foundSet.add(c.trim()));
+    });
+
+    const notFound = values.filter(v => !foundSet.has(v));
+    const meta = `共 ${data.count} 条记录` +
+      (notFound.length ? `　|　未找到：${notFound.join('、')}` : '');
+    document.getElementById('results-meta').textContent = meta;
+    setStatus(meta);
+    log(`查询完成：${data.count} 条结果`, 'info');
+  } catch (e) {
+    setStatus('查询出错');
+    log('查询出错：' + e.message, 'err');
+  } finally {
+    setLoading('query', false);
+  }
+}
+
+// ─── Render results ───────────────────────────────────────────────────────────
+function renderResults(results) {
+  const tbody = document.getElementById('results-body');
+  tbody.innerHTML = '';
+  rowCheckState = {};
+
+  if (!results.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#bbb;padding:24px;font-size:13px">无结果</td></tr>';
+    return;
+  }
+
+  results.forEach((record, i) => {
+    // Record header row
+    const hTr = tbody.insertRow();
+    hTr.className = 'row-record-header';
+    hTr.innerHTML = `<td></td><td colspan="2"># ${i + 1}　　${record.B_L_No || ''}</td>`;
+
+    // Field rows
+    COLUMNS_META.forEach((col, j) => {
+      const value = record[col.id] ?? '';
+      const rowKey = `${i}_${col.id}`;
+      rowCheckState[rowKey] = { label: col.label, checked: col.defaultChecked, value };
+
+      const tr = tbody.insertRow();
+      tr.className = j % 2 === 0 ? 'row-even' : 'row-odd';
+
+      const tdChk = tr.insertCell();
+      tdChk.className = 'col-check';
+      tdChk.textContent = col.defaultChecked ? '☑' : '☐';
+      tdChk.onclick = () => {
+        const s = rowCheckState[rowKey];
+        s.checked = !s.checked;
+        tdChk.textContent = s.checked ? '☑' : '☐';
+      };
+
+      const tdField = tr.insertCell();
+      tdField.className = 'col-field';
+      tdField.textContent = col.label;
+
+      const tdVal = tr.insertCell();
+      tdVal.className = 'col-value';
+      tdVal.textContent = value;
+    });
+  });
+}
+
+// ─── Copy ─────────────────────────────────────────────────────────────────────
+function doCopy() {
+  const lines = Object.values(rowCheckState)
+    .filter(s => s.checked && s.value)
+    .map(s => `${s.label}：${s.value}`);
+  if (!lines.length) { setStatus('没有勾选任何内容'); return; }
+  const text = lines.join('\n');
+  navigator.clipboard.writeText(text).catch(() => {
+    const el = Object.assign(document.createElement('textarea'), { value: text });
+    document.body.appendChild(el); el.select(); document.execCommand('copy');
+    document.body.removeChild(el);
+  });
+  setStatus(`已复制 ${lines.length} 个字段`);
+}
+
+// ─── Update ───────────────────────────────────────────────────────────────────
+async function doUpdate() {
+  let blList = queriedBLList.length
+    ? queriedBLList
+    : parseInput(document.getElementById('query-input').value);
+
+  if (!blList.length) { alert('请先查询，或在输入框中输入提单号'); return; }
+
+  const payload = { bl_numbers: blList };
+  RADIO_DEFS.forEach(({ name, field }) => {
+    const val = getRadio(name);
+    if (val !== SKIP) payload[field] = val;
+  });
+
+  if (Object.keys(payload).length === 1) { alert('请至少选择一列要更新的内容'); return; }
+
+  const colSummary = Object.entries(payload)
+    .filter(([k]) => k !== 'bl_numbers')
+    .map(([k, v]) => `${k}=${v}`).join('、');
+  log(`开始更新 ${blList.length} 个提单号  [${colSummary}]`, 'info');
+
+  setLoading('update', true);
+  setStatus('更新中…');
+  try {
+    const data = await apiFetch('/update', payload);
+    data.success.forEach(bl   => log(`✓ 已更新：${bl}`, 'ok'));
+    data.not_found.forEach(bl => log(`⚠ 未找到：${bl}`, 'warn'));
+    data.failed.forEach(f     => log(`✗ 出错：${f.bl} — ${f.error}`, 'err'));
+
+    const summary = `完成：${data.success.length} 成功  ${data.not_found.length} 未找到  ${data.failed.length} 出错`;
+    log(summary, 'info');
+    setStatus(summary);
+
+    if (data.success.length) {
+      resetRadios();
+      await doQuery();
+    }
+  } catch (e) {
+    setStatus('更新出错');
+    log('更新出错：' + e.message, 'err');
+  } finally {
+    setLoading('update', false);
+  }
+}
+
+// ─── Clear ────────────────────────────────────────────────────────────────────
+function doClear() {
+  document.getElementById('query-input').value = '';
+  document.getElementById('results-body').innerHTML =
+    '<tr><td colspan="3" style="text-align:center;color:#bbb;padding:24px;font-size:13px">暂无数据</td></tr>';
+  document.getElementById('results-meta').textContent = '—';
+  rowCheckState = {};
+  queriedBLList = [];
+  resetRadios();
+  setStatus('就绪');
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function setStatus(msg) { document.getElementById('status-bar').textContent = msg; }
+
+function setLoading(which, on) {
+  const btnId = which === 'query' ? 'btn-query' : 'btn-update';
+  const spnId = which === 'query' ? 'query-spinner' : 'update-spinner';
+  document.getElementById(btnId).disabled = on;
+  document.getElementById(spnId).classList.toggle('visible', on);
+}
+
+function log(msg, type = 'info') {
+  const box = document.getElementById('log-box');
+  const ts  = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  const div = document.createElement('div');
+  div.className = `log-${type}`;
+  div.textContent = `[${ts}] ${msg}`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ─── Keyboard ─────────────────────────────────────────────────────────────────
+document.getElementById('query-input').addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') doQuery();
+});
+
+// ─── PWA install ──────────────────────────────────────────────────────────────
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  document.getElementById('btn-install').style.display = 'block';
+});
+document.getElementById('btn-install').onclick = async () => {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  const { outcome } = await deferredInstallPrompt.userChoice;
+  if (outcome === 'accepted') {
+    document.getElementById('btn-install').style.display = 'none';
+    deferredInstallPrompt = null;
+  }
+};
+
+// ─── Service Worker ───────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .catch(err => console.warn('SW registration failed:', err));
+  });
+}
+
+// ─── First run ────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  const cfg = loadCfg();
+  if (!cfg.apiUrl) setTimeout(openSettings, 400);
+});
+</script>
+</body>
+</html>
