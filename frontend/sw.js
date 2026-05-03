@@ -28,7 +28,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   // Pass API calls and non-GET requests straight through (never cache)
-  if (event.request.method !== 'GET' || url.hostname.includes('railway.app')) {
+  if (event.request.method !== 'GET' || url.hostname.includes('seeyourcargo.com')) {
     return;
   }
   // Cache-first for static assets
