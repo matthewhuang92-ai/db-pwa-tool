@@ -1,0 +1,29 @@
+name: Deploy backend to Vultr
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-db-pwa-tool
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "${{ secrets.VULTR_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t ed25519,rsa 167.179.85.61 > ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Trigger update on Vultr
+        run: |
+          ssh -i ~/.ssh/id_ed25519 root@167.179.85.61 deploy
