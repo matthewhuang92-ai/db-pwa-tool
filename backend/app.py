@@ -12,7 +12,7 @@ DB_HOST  = os.environ["DB_HOST"]
 DB_PORT  = int(os.environ.get("DB_PORT", "3306"))
 DB_USER  = os.environ["DB_USER"]
 DB_PASS  = os.environ["DB_PASS"]
-DB_NAME  = os.environ.get("DB_NAME", "railway")
+DB_NAME  = os.environ.get("DB_NAME", "shiptrack")
 DB_TABLE = os.environ.get("DB_TABLE", "Database_2026")
 API_KEY  = os.environ["API_KEY"]
 
