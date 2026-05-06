@@ -44,10 +44,11 @@ VALID_VALUES: dict[str, set] = {
 # ─── FastAPI app ─────────────────────────────────────────────────────────────
 app = FastAPI(title="Database API", docs_url=None, redoc_url=None)
 
-ALLOWED_ORIGINS = os.environ.get(
-    "ALLOWED_ORIGINS",
-    "https://localhost"
-).split(",")
+ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get("ALLOWED_ORIGINS", "https://localhost").split(",")
+    if o.strip()
+]
 
 app.add_middleware(
     CORSMiddleware,
