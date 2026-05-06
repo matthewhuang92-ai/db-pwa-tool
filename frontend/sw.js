@@ -1,4 +1,4 @@
-const CACHE_NAME = 'db-tool-v1';
+const CACHE_NAME = 'db-tool-v2';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -27,11 +27,10 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-  // Pass API calls and non-GET requests straight through (never cache)
-  if (event.request.method !== 'GET' || url.hostname.includes('seeyourcargo.com')) {
+  // Only cache same-origin GET requests; everything else (API calls, cross-origin) passes through
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin) {
     return;
   }
-  // Cache-first for static assets
   event.respondWith(
     caches.match(event.request)
       .then(cached => cached || fetch(event.request))
